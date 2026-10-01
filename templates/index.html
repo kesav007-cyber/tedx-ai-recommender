@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEDx AI Recommender</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 40px 20px; }
+        .container { max-width: 900px; margin: auto; }
+        h1 { color: #e62b1e; text-align: center; font-size: 2.5em; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 40px; }
+        
+        /* Search Bar Styles */
+        .search-wrapper { position: relative; max-width: 600px; margin: 0 auto 40px auto; }
+        input[type="text"] { width: 100%; padding: 15px 20px; font-size: 18px; border: 2px solid #ddd; border-radius: 30px; outline: none; box-sizing: border-box; transition: border-color 0.3s; }
+        input[type="text"]:focus { border-color: #e62b1e; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 250px; overflow-y: auto; z-index: 99; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 5px; }
+        .autocomplete-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .autocomplete-item:hover { background-color: #f9f9f9; color: #e62b1e; }
+
+        /* Card Styles */
+        .cards-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        .card { background: white; border-radius: 12px; padding: 25px; width: calc(50% - 30px); box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.2s; border-top: 4px solid #e62b1e; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
+        .card:hover { transform: translateY(-5px); }
+        .card h3 { margin: 0 0 10px 0; font-size: 1.2em; color: #222; }
+        .card .meta { font-size: 0.9em; color: #777; margin-bottom: 12px; font-weight: bold; }
+        .card .snippet { font-size: 0.95em; color: #555; line-height: 1.5; margin-bottom: 15px; }
+        
+        /* AI Tags Styling */
+        .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+        .tag { background-color: #f1f2f6; color: #e62b1e; font-size: 0.8em; padding: 4px 10px; border-radius: 15px; font-weight: 600; border: 1px solid #e2e8f0; }
+
+        @media (max-width: 768px) { .card { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TEDx AI Recommender</h1>
+        <p class="subtitle">Discover your next idea. Powered by Natural Language Processing.</p>
+
+        <form id="searchForm" method="POST" style="display: none;">
+            <input type="hidden" name="title" id="hiddenTitle">
+        </form>
+
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="Search for a talk you love..." autocomplete="off" value="{{ selected_title }}">
+            <div id="autocompleteList" class="autocomplete-list"></div>
+        </div>
+
+        {% if recommendations %}
+            <h2 style="margin-top: 40px;">Recommended for you:</h2>
+            <div class="cards-grid">
+                {% for rec in recommendations %}
+                    <div class="card">
+                        <div>
+                            <h3>{{ rec.title }}</h3>
+                            <div class="meta">🗣 {{ rec.speaker }} | 📅 {{ rec.year }}</div>
+                            <div class="snippet">{{ rec.snippet }}</div>
+                        </div>
+                        <div class="tags-container">
+                            {% for tag in rec.tags %}
+                                <span class="tag">#{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const allTitles = {{ titles | tojson | safe }};
+        const searchInput = document.getElementById('searchInput');
+        const autocompleteList = document.getElementById('autocompleteList');
+        const searchForm = document.getElementById('searchForm');
+        const hiddenTitle = document.getElementById('hiddenTitle');
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            autocompleteList.innerHTML = '';
+            
+            if (!query) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            const filteredTitles = allTitles.filter(title => title.toLowerCase().includes(query)).slice(0, 8);
+            
+            if (filteredTitles.length > 0) {
+                autocompleteList.style.display = 'block';
+                filteredTitles.forEach(title => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    
+                    const regex = new RegExp(`(${query})`, "gi");
+                    div.innerHTML = title.replace(regex, "<strong>$1</strong>");
+                    
+                    div.addEventListener('click', function() {
+                        hiddenTitle.value = title;
+                        searchForm.submit();
+                    });
+                    autocompleteList.appendChild(div);
+                });
+            } else {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
